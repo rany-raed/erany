@@ -2,8 +2,8 @@ name: TikTok Monitor
 
 on:
   schedule:
-    - cron: '0 * * * *'  # يعمل كل ساعة
-  workflow_dispatch:  # يسمح بالتشغيل اليدوي
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   monitor:
@@ -20,8 +20,7 @@ jobs:
         python-version: '3.11'
     
     - name: Clone TikTok Scraper
-      run: |
-        git clone https://github.com/Q-Bukold/TikTok-Content-Scraper.git
+      run: git clone https://github.com/Q-Bukold/TikTok-Content-Scraper.git
     
     - name: Install Dependencies
       run: |
@@ -33,16 +32,14 @@ jobs:
       with:
         path: monitor_state.db
         key: monitor-state-${{ github.run_id }}
-        restore-keys: |
-          monitor-state-
+        restore-keys: monitor-state-
     
     - name: Run Monitor
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         ACCOUNTS: ${{ secrets.ACCOUNTS }}
         THRESHOLD: '10000'
-      run: |
-        python3 monitor.py
+      run: python3 monitor.py
     
     - name: Save State
       uses: actions/cache/save@v4
@@ -50,14 +47,4 @@ jobs:
       with:
         path: monitor_state.db
         key: monitor-state-${{ github.run_id }}
-    
-    - name: Upload Logs
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: monitor-logs-${{ github.run_number }}
-        path: |
-          *.log
-          monitor_state.db
-        retention-days: 7
 ```
