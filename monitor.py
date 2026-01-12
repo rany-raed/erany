@@ -14,13 +14,6 @@ SLACK_WEBHOOK = os.getenv('SLACK_WEBHOOK', '')
 ACCOUNTS = os.getenv('ACCOUNTS', '').split(',')
 THRESHOLD = int(os.getenv('THRESHOLD', '10000'))
 
-scraper = TT_Content_Scraper(
-    wait_time=0.5,
-    output_files_fp="temp/",
-    progress_file_fn="scraper.db",
-    clear_console=False
-)
-
 class Database:
     def __init__(self):
         self.db = 'monitor_state.db'
@@ -104,11 +97,19 @@ def send_slack(video):
 def get_videos(username):
     print(f"Checking {username}...")
     try:
+        scraper = TT_Content_Scraper(
+            wait_time=0.5,
+            output_files_fp="temp/",
+            progress_file_fn=f"sc_{username}.db",
+            clear_console=False
+        )
+        
         scraper.add_objects(ids=[username], title=f"m_{username}", type="user")
         scraper.scrape_pending(only_users=True, scrape_files=False)
         
         user_file = f"temp/user_metadata/{username}.json"
         if not os.path.exists(user_file):
+            print(f"No data for {username}")
             return []
         
         with open(user_file, 'r') as f:
@@ -120,7 +121,7 @@ def get_videos(username):
         if items:
             video_ids = [item.get('id') for item in items if item.get('id')]
             if video_ids:
-                scraper.add_objects(ids=video_ids, title=f"f_{username}", type="content")
+                scraper.add_objects(ids=video_ids, title=f"v_{username}", type="content")
                 scraper.scrape_pending(only_content=True, scrape_files=False)
                 
                 for item in items:
@@ -143,7 +144,7 @@ def get_videos(username):
         print(f"Found {len(videos)} videos")
         return videos
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error for {username}: {e}")
         return []
 
 def main():
@@ -152,7 +153,7 @@ def main():
     print(f"Threshold: {THRESHOLD:,}")
     
     if not SLACK_WEBHOOK:
-        print("No webhook!")
+        print("No webhook configured!")
         return
     
     db = Database()
@@ -165,12 +166,13 @@ def main():
         for video in videos:
             db.save(video['video_id'], video['username'], video['views'])
             if db.should_alert(video['video_id'], video['views']):
+                print(f"ALERT: {video['username']} - {video['views']:,} views")
                 if send_slack(video):
                     db.mark_sent(video['video_id'])
                     alerts += 1
         time.sleep(2)
     
-    print(f"Completed! Alerts: {alerts}")
+    print(f"Completed! Alerts sent: {alerts}")
 
 if __name__ == '__main__':
     main()
