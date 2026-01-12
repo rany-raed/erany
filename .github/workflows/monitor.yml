@@ -7,12 +7,10 @@ on:
 
 jobs:
   monitor:
-    name: Check TikTok Accounts
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
     - name: Setup Python
       uses: actions/setup-python@v5
@@ -27,24 +25,9 @@ jobs:
         pip install requests
         pip install -r TikTok-Content-Scraper/requirements.txt
     
-    - name: Restore Previous State
-      uses: actions/cache/restore@v4
-      with:
-        path: monitor_state.db
-        key: monitor-state-${{ github.run_id }}
-        restore-keys: monitor-state-
-    
     - name: Run Monitor
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         ACCOUNTS: ${{ secrets.ACCOUNTS }}
         THRESHOLD: '10000'
       run: python3 monitor.py
-    
-    - name: Save State
-      uses: actions/cache/save@v4
-      if: always()
-      with:
-        path: monitor_state.db
-        key: monitor-state-${{ github.run_id }}
-```
